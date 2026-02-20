@@ -45,76 +45,113 @@ def human_time(iso_timestamp: str) -> str:
     return parsed.strftime("%Y-%m-%d %H:%M UTC")
 
 
-def render_page(submissions: list[dict], message: str = "", error: str = "") -> str:
-    rows = []
-    for item in reversed(submissions):
-        rows.append(
+def render_status_alert(message: str = "", error: str = "") -> str:
+    if message:
+        return (
+            "<div class='mb-6 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700'>"
+            f"{html.escape(message)}"
+            "</div>"
+        )
+    if error:
+        return (
+            "<div class='mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700'>"
+            f"{html.escape(error)}"
+            "</div>"
+        )
+    return ""
+
+
+def render_submission_rows(submissions: list[dict]) -> str:
+    if not submissions:
+        return (
             "<tr>"
-            f"<td>{html.escape(item['student_name'])}</td>"
-            f"<td>{html.escape(item['title'])}</td>"
-            f"<td><a href='/uploads/{html.escape(item['stored_name'])}'>{html.escape(item['original_name'])}</a></td>"
-            f"<td>{html.escape(human_time(item['submitted_at']))}</td>"
+            "<td class='px-4 py-6 text-center text-slate-500' colspan='4'>No submissions yet.</td>"
             "</tr>"
         )
 
-    table_content = "\n".join(rows) if rows else "<tr><td colspan='4'>No submissions yet.</td></tr>"
+    rows = []
+    for item in reversed(submissions):
+        rows.append(
+            "<tr class='border-t border-slate-100 hover:bg-slate-50'>"
+            f"<td class='px-4 py-3 text-slate-700'>{html.escape(item['student_name'])}</td>"
+            f"<td class='px-4 py-3 text-slate-700'>{html.escape(item['title'])}</td>"
+            "<td class='px-4 py-3'>"
+            f"<a class='font-medium text-indigo-600 hover:text-indigo-500 hover:underline' href='/uploads/{html.escape(item['stored_name'])}'>"
+            f"{html.escape(item['original_name'])}"
+            "</a>"
+            "</td>"
+            f"<td class='px-4 py-3 text-slate-500'>{html.escape(human_time(item['submitted_at']))}</td>"
+            "</tr>"
+        )
+    return "\n".join(rows)
+
+
+def render_page(submissions: list[dict], message: str = "", error: str = "") -> str:
+    alert = render_status_alert(message=message, error=error)
+    table_content = render_submission_rows(submissions)
 
     return f"""<!doctype html>
-<html lang='en'>
+<html lang='en' class='h-full bg-slate-50'>
 <head>
   <meta charset='utf-8'>
   <meta name='viewport' content='width=device-width, initial-scale=1'>
   <title>Assignment Submission Platform</title>
-  <style>
-    :root {{ color-scheme: light dark; }}
-    body {{ font-family: Arial, sans-serif; margin: 2rem auto; max-width: 900px; padding: 0 1rem; }}
-    h1 {{ margin-bottom: 0.5rem; }}
-    .card {{ border: 1px solid #ddd; border-radius: 10px; padding: 1rem; margin-bottom: 1.5rem; }}
-    .message {{ color: #0a7d1f; }}
-    .error {{ color: #b00020; }}
-    label {{ display: block; margin-top: 0.75rem; font-weight: 600; }}
-    input, button {{ margin-top: 0.3rem; font-size: 1rem; }}
-    input[type='text'] {{ width: min(500px, 100%); padding: 0.4rem; }}
-    button {{ padding: 0.5rem 0.8rem; border-radius: 6px; border: 1px solid #888; cursor: pointer; }}
-    table {{ border-collapse: collapse; width: 100%; }}
-    th, td {{ border: 1px solid #ddd; padding: 0.6rem; text-align: left; }}
-  </style>
+  <script src='https://cdn.tailwindcss.com'></script>
 </head>
-<body>
-  <h1>Assignment Submission Platform</h1>
-  <p>Upload handwritten assignment scans/photos (PDF, PNG, JPG, JPEG). Max size: 15MB.</p>
-  {f"<p class='message'>{html.escape(message)}</p>" if message else ""}
-  {f"<p class='error'>{html.escape(error)}</p>" if error else ""}
+<body class='min-h-full text-slate-900'>
+  <main class='mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8'>
+    <section class='mb-8'>
+      <h1 class='text-3xl font-bold tracking-tight text-slate-900'>Assignment Submission Platform</h1>
+      <p class='mt-2 text-slate-600'>Upload handwritten assignment scans/photos (PDF, PNG, JPG, JPEG). Max size: 15MB.</p>
+    </section>
 
-  <section class='card'>
-    <h2>Submit assignment</h2>
-    <form action='/submit' method='post' enctype='multipart/form-data'>
-      <label for='student_name'>Student name</label>
-      <input type='text' id='student_name' name='student_name' required>
+    {alert}
 
-      <label for='title'>Assignment title</label>
-      <input type='text' id='title' name='title' required>
+    <div class='grid gap-6 lg:grid-cols-5'>
+      <section class='rounded-xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2'>
+        <h2 class='text-lg font-semibold text-slate-900'>Submit assignment</h2>
+        <form class='mt-4 space-y-4' action='/submit' method='post' enctype='multipart/form-data'>
+          <div>
+            <label class='block text-sm font-medium text-slate-700' for='student_name'>Student name</label>
+            <input class='mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20' type='text' id='student_name' name='student_name' required>
+          </div>
 
-      <label for='file'>Handwritten assignment file</label>
-      <input type='file' id='file' name='file' accept='.pdf,.png,.jpg,.jpeg' required>
+          <div>
+            <label class='block text-sm font-medium text-slate-700' for='title'>Assignment title</label>
+            <input class='mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20' type='text' id='title' name='title' required>
+          </div>
 
-      <div style='margin-top: 1rem;'>
-        <button type='submit'>Upload assignment</button>
-      </div>
-    </form>
-  </section>
+          <div>
+            <label class='block text-sm font-medium text-slate-700' for='file'>Handwritten assignment file</label>
+            <input class='mt-1 block w-full cursor-pointer rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium hover:file:bg-slate-200' type='file' id='file' name='file' accept='.pdf,.png,.jpg,.jpeg' required>
+          </div>
 
-  <section class='card'>
-    <h2>Recent submissions</h2>
-    <table>
-      <thead>
-        <tr><th>Student</th><th>Title</th><th>File</th><th>Submitted at</th></tr>
-      </thead>
-      <tbody>
-        {table_content}
-      </tbody>
-    </table>
-  </section>
+          <button class='inline-flex w-full items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2' type='submit'>
+            Upload assignment
+          </button>
+        </form>
+      </section>
+
+      <section class='rounded-xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-3'>
+        <h2 class='text-lg font-semibold text-slate-900'>Recent submissions</h2>
+        <div class='mt-4 overflow-x-auto'>
+          <table class='min-w-full divide-y divide-slate-200 text-sm'>
+            <thead class='bg-slate-50'>
+              <tr>
+                <th class='px-4 py-3 text-left font-semibold text-slate-600'>Student</th>
+                <th class='px-4 py-3 text-left font-semibold text-slate-600'>Title</th>
+                <th class='px-4 py-3 text-left font-semibold text-slate-600'>File</th>
+                <th class='px-4 py-3 text-left font-semibold text-slate-600'>Submitted at</th>
+              </tr>
+            </thead>
+            <tbody class='divide-y divide-slate-100 bg-white'>
+              {table_content}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </main>
 </body>
 </html>
 """
