@@ -1,0 +1,80 @@
+============================= test session starts =============================
+platform win32 -- Python 3.10.5, pytest-8.3.2, pluggy-1.5.0
+rootdir: C:\Users\USER\Desktop\submit-test
+plugins: anyio-4.4.0
+collected 4 items
+
+tests\test_server.py .FFF                                                [100%]
+
+================================== FAILURES ===================================
+_______________________ test_valid_submission_is_saved ________________________
+
+    def test_valid_submission_is_saved():
+        with TemporaryDirectory() as temp_dir:
+            client = start_test_client(temp_dir)
+    
+            response = client.post(
+                "/submit",
+                data={"student_name": "Alice", "title": "Math Homework"},
+                files={"file": ("homework.jpg", b"fake-image-bytes", "image/jpeg")},
+                follow_redirects=False # We want to check the redirect location
+            )
+    
+            assert response.status_code == 303
+            location = response.headers["location"]
+>           assert "message=Assignment+uploaded+successfully" in location or "message=Assignment uploaded successfully" in location
+E           AssertionError: assert ('message=Assignment+uploaded+successfully' in '/?message=Assignment%20uploaded%20successfully.' or 'message=Assignment uploaded successfully' in '/?message=Assignment%20uploaded%20successfully.')
+
+tests\test_server.py:44: AssertionError
+______________________ test_rejects_disallowed_file_type ______________________
+
+    def test_rejects_disallowed_file_type():
+        with TemporaryDirectory() as temp_dir:
+            client = start_test_client(temp_dir)
+    
+            response = client.post(
+                "/submit",
+                data={"student_name": "Alice", "title": "Essay"},
+                files={"file": ("essay.txt", b"text", "text/plain")},
+                follow_redirects=False
+            )
+    
+            assert response.status_code == 303
+            location = response.headers["location"]
+            assert "error=" in location
+>           assert "Only+PDF" in location or "Only PDF" in location
+E           AssertionError: assert ('Only+PDF' in '/?error=Only%20PDF,%20PNG,%20JPG,%20and%20JPEG%20files%20are%20allowed.' or 'Only PDF' in '/?error=Only%20PDF,%20PNG,%20JPG,%20and%20JPEG%20files%20are%20allowed.')
+
+tests\test_server.py:69: AssertionError
+____________ test_missing_form_values_sets_friendly_error_message _____________
+
+    def test_missing_form_values_sets_friendly_error_message():
+        with TemporaryDirectory() as temp_dir:
+            client = start_test_client(temp_dir)
+    
+            # Sending empty student name
+            response = client.post(
+                "/submit",
+                data={"student_name": "", "title": "Essay"},
+                files={"file": ("essay.jpg", b"image", "image/jpeg")},
+                follow_redirects=False
+            )
+    
+            assert response.status_code == 303
+            location = response.headers["location"]
+>           assert "error=Please+fill+all+fields" in location or "error=Please fill all fields" in location
+E           AssertionError: assert ('error=Please+fill+all+fields' in '/?error=Please%20fill%20all%20fields%20and%20upload%20a%20file.' or 'error=Please fill all fields' in '/?error=Please%20fill%20all%20fields%20and%20upload%20a%20file.')
+
+tests\test_server.py:88: AssertionError
+============================== warnings summary ===============================
+tests/test_server.py::test_homepage_loads_and_shows_form
+  C:\Users\USER\AppData\Local\Programs\Python\Python310\lib\site-packages\starlette\templating.py:161: DeprecationWarning: The `name` is not the first parameter anymore. The first parameter should be the `Request` instance.
+  Replace `TemplateResponse(name, {"request": request})` by `TemplateResponse(request, name)`.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_server.py::test_valid_submission_is_saved - AssertionError:...
+FAILED tests/test_server.py::test_rejects_disallowed_file_type - AssertionErr...
+FAILED tests/test_server.py::test_missing_form_values_sets_friendly_error_message
+=================== 3 failed, 1 passed, 1 warning in 1.81s ====================
